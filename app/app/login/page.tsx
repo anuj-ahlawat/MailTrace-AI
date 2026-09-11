@@ -181,22 +181,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">{user.name}</div>
-                    <div className="text-xs text-slate-500">{user.role} — {user.email}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <p className="text-center text-xs text-slate-600 mt-6">
-          MailTrace AI v2.1 · SIH 2026 Prototype · All analysis data is simulated
-        </p>
-      </div>
-    </div>
-  );
-}

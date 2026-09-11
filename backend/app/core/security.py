@@ -69,10 +69,17 @@ async def get_current_user(request: Request):
     db = get_db()
     from bson import ObjectId
     user_id = payload.get("sub")
-    try:
-        user = await db.users.find_one({"_id": ObjectId(user_id)})
-    except Exception:
-        user = None
+    user = None
+
+    # Try string _id first (seeded demo users use string IDs like 'user-admin-001')
+    user = await db.users.find_one({"_id": user_id})
+
+    # Fall back to ObjectId _id (dynamically created users)
+    if not user:
+        try:
+            user = await db.users.find_one({"_id": ObjectId(user_id)})
+        except Exception:
+            pass
 
     if not user or user.get("status") != "active":
         raise HTTPException(

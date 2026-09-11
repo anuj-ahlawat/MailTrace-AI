@@ -75,7 +75,12 @@ async def gmail_callback(code: str, state: str, request: Request):
 
         credentials = flow.credentials
         db = get_db()
-        user = await db.users.find_one({"_id": ObjectId(state)})
+        user = await db.users.find_one({"_id": state})
+        if not user:
+            try:
+                user = await db.users.find_one({"_id": ObjectId(state)})
+            except Exception:
+                pass
 
         await db.gmail_connections.update_one(
             {"user_id": state},

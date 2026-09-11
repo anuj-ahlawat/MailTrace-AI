@@ -126,6 +126,25 @@ async def deactivate_user(
 evidence_router = APIRouter(prefix="/evidence", tags=["Evidence"])
 
 
+@evidence_router.get("")
+async def list_evidence(
+    skip: int = 0, limit: int = 50,
+    current_user: dict = Depends(require_analyst),
+):
+    db = get_db()
+    cursor = db.evidence.find({}).sort("created_at", -1).skip(skip).limit(limit)
+    docs = await cursor.to_list(length=limit)
+    total = await db.evidence.count_documents({})
+    result = []
+    for d in docs:
+        d["id"] = str(d.pop("_id", ""))
+        for k, v in d.items():
+            if hasattr(v, 'isoformat'):
+                d[k] = v.isoformat()
+        result.append(d)
+    return {"items": result, "total": total}
+
+
 @evidence_router.get("/{evidence_id}")
 async def get_evidence(evidence_id: str, current_user: dict = Depends(require_analyst)):
     db = get_db()
