@@ -1,16 +1,2 @@
-import Sidebar from '@/components/Sidebar';
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <Sidebar />
-      <main className="ml-[260px] min-h-screen">
-        {children}
-      </main>
-    </div>
-  );
-}
+import Workspace from '@/components/Workspace';
+export default function DashboardLayout({children}:{children:React.ReactNode}) { return <Workspace>{children}</Workspace>; }

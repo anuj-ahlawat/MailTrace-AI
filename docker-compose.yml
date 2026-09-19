@@ -1,0 +1,77 @@
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: docker/backend.Dockerfile
+    args:
+      INSTALL_DEEP: ${INSTALL_DEEP:-false}
+  env_file: .env
+  environment: &backend-env
+    MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASSWORD}@mongodb:27017/mailtrace_enterprise?authSource=mailtrace_enterprise
+    MONGODB_DB_NAME: mailtrace_enterprise
+    REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    DATA_DIR: /srv/data
+    MODEL_DIR: /srv/ml/artifacts/production
+    WORKER_MODE: celery
+  volumes:
+    - evidence:/srv/data
+    - ./ml/artifacts:/srv/ml/artifacts:ro
+  restart: unless-stopped
+  security_opt: [no-new-privileges:true]
+  depends_on:
+    mongodb:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+services:
+  mongodb:
+    image: mongo:8
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?Run scripts/setup.py first}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Run scripts/setup.py first}
+      MONGO_APP_USER: ${MONGO_APP_USER}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
+    volumes:
+      - mongodb:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mailtrace.js:ro
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, 'db.adminCommand("ping").ok']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run scripts/setup.py first}
+    command: [sh, -c, 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    volumes: [redis:/data]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  backend:
+    <<: *backend
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://localhost:8000/health")']
+      interval: 15s
+      timeout: 8s
+      retries: 5
+  worker:
+    <<: *backend
+    command: [celery, -A, app.workers.celery_app:celery, worker, --beat, --loglevel=INFO, --concurrency=2, --schedule=/srv/data/celerybeat-schedule]
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports: ["127.0.0.1:3000:3000"]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      backend:
+        condition: service_healthy
+volumes:
+  mongodb:
+  redis:
+  evidence:

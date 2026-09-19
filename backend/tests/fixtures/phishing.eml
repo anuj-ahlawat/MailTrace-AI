@@ -1,0 +1,31 @@
+From: Microsoft Security <alert@micr0soft.example>
+To: Analyst <recipient@example.com>
+Cc: copy@example.com
+Reply-To: reply@example.com
+Return-Path: <bounce@example.com>
+Subject: Verify your account
+Date: Fri, 18 Sep 2026 10:00:00 +0000
+Message-ID: <fixture-phishing@example.com>
+Received: from outbound.example.com (outbound.example.com [8.8.8.8]) by
+ receiving.example.com with ESMTP; Fri, 18 Sep 2026 10:00:01 +0000
+Received-SPF: neutral (supplied fixture assertion) client-ip=8.8.8.8;
+ envelope-from=bounce@example.com
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============2342336288589782709=="
+
+--===============2342336288589782709==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Verify your account now.
+
+--===============2342336288589782709==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<a href=3D"http://micr0soft.example/login?next=3Dhttps%3A%2F%2Fevil.example%2=
+Fverify">https://microsoft.com/account</a>
+
+--===============2342336288589782709==--

@@ -1,4 +1,21 @@
+.DS_Store
+.env
+.env.*
+!.env.example
 backend/.env
-backend/.env
-
-backend/.env
+backend/venv/
+.venv/
+__pycache__/
+*.pyc
+data/
+MailTrace-AI Dataset/
+ml/artifacts/
+!ml/artifacts/.gitkeep
+app/node_modules/
+app/.next/
+app/tsconfig.tsbuildinfo
+*.log
+output/
+tmp/
+GeoLite2-*/
+*.mmdb

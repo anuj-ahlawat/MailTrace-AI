@@ -1,0 +1,17 @@
+From: Microsoft IT <support@unrelated.example>
+To: Analyst <recipient@example.com>
+Cc: copy@example.com
+Reply-To: reply@example.com
+Return-Path: <bounce@example.com>
+Subject: Security notice
+Date: Fri, 18 Sep 2026 10:00:00 +0000
+Message-ID: <fixture-impersonation@example.com>
+Received: from outbound.example.com (outbound.example.com [8.8.8.8]) by
+ receiving.example.com with ESMTP; Fri, 18 Sep 2026 10:00:01 +0000
+Received-SPF: neutral (supplied fixture assertion) client-ip=8.8.8.8;
+ envelope-from=bounce@example.com
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+MIME-Version: 1.0
+
+Please contact our support team for your account.
