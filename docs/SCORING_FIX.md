@@ -1,5 +1,15 @@
 # Scoring and missing-location correction — 2026-09-19
 
+**Superseded for new/current scores by policy 2.1:** see [the September 20 scoring and workflow corrections](QUALITY_CHECK_2026-09-20.md). The following sections document the earlier 2.0 behavior and its historical test results.
+
+## Score display correction — later on 2026-09-19
+
+The reported 6.37 example was traced to an existing SPAM analysis with 81.34% model class probability. Its arithmetic is consistent with scoring policy 2.0: 0.75 URL points plus 5.62 AI points, rounded to a final risk of 6/100. AI points are `15 × (P(PHISHING) + P(BEC) + 0.4 × P(SPAM))`. Class probability is not the risk score. No probability, weight, threshold, or stored evidence was changed to inflate this result.
+
+The actual display defect used a fixed maximum of 100 for every category bar. `RiskBreakdown.tsx` now uses each category's configured maximum, including custom weights, and handles disabled zero-weight categories without invalid meters. For example, 5.62/15 fills approximately 37.47% of its category bar. The panel explains rounding, any correlation adjustment, and the model formula. It distinguishes unverified header assertions, unavailable reputation/model results, missing relay evidence, and absent URLs/attachments from completed checks. GeoIP results cannot masquerade as reputation coverage. This also works with existing stored analyses; refresh the page, with no reanalysis required for the display correction.
+
+Verification for this change: 47 backend tests passed (one integration test skipped), five real-component render tests passed, TypeScript and ESLint passed, and the production webpack build passed. The authenticated browser panel could not be visually checked because the test browser required sign-in. Run the component regressions with `cd app && node --test tests/risk-breakdown.test.mjs`. The earlier integration results below describe the prior scoring change, not a fresh integration run.
+
 The supplied `mailtrace_phishing_test.eml` reproduced a PHISHING model prediction with probability 0.999536 but a LOW risk score of 23. It contains no Received headers or public IP. Therefore it cannot provide a sending location, even with valid GeoLite2 databases.
 
 ## Fixes

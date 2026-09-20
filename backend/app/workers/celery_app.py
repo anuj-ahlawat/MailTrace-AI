@@ -2,7 +2,7 @@
 import os
 from celery import Celery
 from app.platform.store import db
-from app.platform.pipeline import process
+from app.platform.pipeline import process,expire_jobs
 
 celery=Celery('mailtrace',broker=os.getenv('REDIS_URL','redis://localhost:6379/0'))
 celery.conf.update(task_serializer='json',accept_content=['json'],task_acks_late=True,
@@ -15,9 +15,7 @@ def analyze(job_id):process(job_id)
 
 @celery.task(name='mailtrace.dispatch')
 def dispatch():
-    from app.platform.store import now
-    db.jobs.update_many({'lease_until':{'$lt':now()},'status':{'$nin':['Completed','Failed','Uploaded']}},
-        {'$set':{'status':'Failed','error':'Worker lease expired; retry explicitly'}})
+    expire_jobs()
     for job in db.jobs.find({'status':'Uploaded'}).sort('created_at',1).limit(20):analyze.delay(job['_id'])
 
 @celery.task(name='mailtrace.retention')

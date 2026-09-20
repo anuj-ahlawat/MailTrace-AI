@@ -77,6 +77,20 @@ class ScoringAndLocation(unittest.TestCase):
         self.config['risk_weights']['url']=0
         self.assertFalse(self.score()['correlation_rules'])
 
+    def test_spam_class_probability_is_not_the_risk_score(self):
+        parsed=parse(b'From: shop@example.com\nSubject: Sale\n\nhttps://example.com/' + b'a'*260)
+        ml={'status':'Available','label':'SPAM','confidence':.8134224814923526,
+            'probabilities':{'BENIGN':.13718751607420862,'PHISHING':.04637663424497071,
+                'BEC':.0030133681884679446,'SPAM':.8134224814923526}}
+        result=self.score(parsed,ml)
+        contributions={c['category']:c for c in result['contributions']}
+        self.assertEqual(contributions['url']['points'],.75)
+        self.assertEqual(contributions['ai']['points'],5.62)
+        self.assertEqual(result['weighted_score'],6.37)
+        self.assertEqual(result['risk_score'],6)
+        self.assertEqual(result['confidence'],ml['confidence'])
+        self.assertFalse(result['correlation_rules'])
+
     def test_geoip_states_are_distinguished(self):
         parsed=parse((FIXTURES/'benign.eml').read_bytes())
         for state,expected in [('Disabled','Disabled'),('Not Configured','Not Configured'),('Unavailable','Unavailable'),('Not Found','Not Found')]:

@@ -23,7 +23,7 @@ This document maps the requested completion summary to the implemented applicati
 | 17. External setup | VirusTotal and AbuseIPDB currently show Configured (credential presence only). URLScan and GreyNoise are unnecessary for the default local stack; GeoIP needs local MaxMind database files. Gmail needs OAuth app configuration and user consent. Settings accurately shows credential presence, not verified connectivity. |
 | 18. Limits | Docker Compose validates, but Docker build/start was not executed because Docker startup was declined. Live credential-dependent integrations were not end-to-end verified. SPF cannot be independently verified without trusted SMTP context; real local RSA-SHA256 DKIM verification is implemented. No active probing, malware execution sandbox, optional ensemble or human attribution is claimed. |
 | 19. Dataset problems | BEC source is human-reviewed synthetic, with only 30 held-out BEC examples; SPAM held-out support is 72. Ambiguous CEAS spam/phishing positives were excluded. One parser failure, short messages and duplicate records were excluded. Source and historical-data bias remain. |
-| 20. Migration | Original prototype preserved in `legacy/`; old database preserved. Production uses separate `mailtrace_enterprise` with authentic acquisitions only; no seeded records were silently migrated. |
+| 20. Migration | Unused prototype removed from the working tree; source remains in Git history and the old database is preserved. Production uses separate `mailtrace_enterprise` with authentic acquisitions only; no seeded records were silently migrated. |
 
 See [implementation reference](IMPLEMENTATION.md), [dataset provenance](DATASETS.md), [measured models](MODELS.md), and [run instructions](../README.md).
 

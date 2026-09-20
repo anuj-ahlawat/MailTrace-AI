@@ -9,7 +9,9 @@ export default function NetworkMap({ points, emptyReason }: { points: GeoPoint[]
   return <>
     {tilesUnavailable && <p role="status" className="soc-note">Map background unavailable. GeoIP markers and location details are still available. <button type="button" onClick={() => setTilesUnavailable(false)}>Retry map background</button></p>}
     <div style={{ height: 420 }}>
-      <MapContainer key={points.map(p => `${p.ip}:${p.latitude}:${p.longitude}`).join('|')} center={[points[0].latitude, points[0].longitude]} zoom={3} scrollWheelZoom={false}>
+      <MapContainer key={points.map(p => `${p.ip}:${p.latitude}:${p.longitude}`).join('|')} center={points.length===1?[points[0].latitude, points[0].longitude]:undefined} zoom={3}
+        bounds={points.length>1?points.map(p => [p.latitude,p.longitude] as [number,number]):undefined}
+        boundsOptions={{padding:[24,24],maxZoom:6}} scrollWheelZoom={false}>
         {!tilesUnavailable && <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"

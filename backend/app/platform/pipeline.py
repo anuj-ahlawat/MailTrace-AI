@@ -9,10 +9,23 @@ from datetime import timedelta
 from .store import db,now,uid,settings,preserve,original,custody,event
 from .forensics import parse,ip_kind
 from .authentication import enrich_authentication
-from .intelligence import lookup,malicious_signals,statuses
+from .intelligence import lookup,malicious_signals,statuses,enrich_mail_path,coordinates_available
 from app.ml.service import ml_service
 
 logger=logging.getLogger('mailtrace.pipeline')
+RISK_VERSION='2.1'
+
+def model_review_policy(ml,config):
+    """Review priority policy, separate from forensic evidence and probabilities."""
+    if ml.get('status')!='Available' or config['risk_weights'].get('ai',0)<=0:return None
+    label=ml.get('label')
+    if label not in ('PHISHING','BEC'):return None
+    probability=ml['probabilities'][label]
+    high=probability>=.7
+    return {'id':'model_threat_review','minimum_score':config['risk_thresholds'][1 if high else 0],
+        'label':label,'class_probability':probability,'high_priority_probability_threshold':.7,
+        'reason':f'Model predicts {label}: '+('class probability is at least 70%; HIGH review priority required' if high else 'MEDIUM review priority required'),
+        'limitation':'Policy review minimum, not additional forensic evidence or a calibrated probability of harm'}
 
 def correlation_rules(parsed,config):
     """Explicit review policy, not learned probabilities or external reputation.
@@ -53,7 +66,8 @@ def risk(parsed,ml,enrichment,config):
     if verified.get('status')=='FAIL':add('authentication',.35,'DKIM did not validate against the preserved message; forwarding or modification can also invalidate a signature',verified,'Local DKIM verification')
     identity=parsed['sender_identity']
     if identity['reply_to_mismatch']:add('sender_identity',.4,'Reply-To registered domain differs from sender',identity)
-    if identity['lookalikes']:add('sender_identity',.6,'Potential lookalike domains',identity['lookalikes'])
+    sender_lookalikes=[x for x in identity['lookalikes'] if x['observed_domain'] in {identity.get('sender_domain'),identity.get('reply_to_domain')}]
+    if sender_lookalikes:add('sender_identity',.6,'Potential sender or Reply-To lookalike domains',sender_lookalikes)
     if identity.get('display_name_mismatch'):add('sender_identity',.4,'Brand in display name differs from sender domain; review possible impersonation',identity['display_name_mismatch'])
     for url in parsed['urls']:
         strength=min(1,sum(s['strength'] for s in url.get('signals',[]))) if 'signals' in url else min(1,len(url['flags'])*.2)
@@ -69,7 +83,7 @@ def risk(parsed,ml,enrichment,config):
         add('intelligence',strength,'Bounded provider reputation evidence; not an email verdict',[b for b in bad if b['provider']==provider],'Threat intelligence')
     if ml['status']=='Available':
         threat=ml['probabilities']['PHISHING']+ml['probabilities']['BEC']+.4*ml['probabilities']['SPAM']
-        add('ai',threat,'Model-derived threat probability (not a forensic fact)',ml['probabilities'],'AI')
+        add('ai',threat,'Policy-weighted model evidence: P(PHISHING) + P(BEC) + 0.4 × P(SPAM); not a calibrated threat probability',ml['probabilities'],'AI')
     weights=config['risk_weights'];contributions=[]
     for key,weight in weights.items():
         strengths=[s['strength'] for s in signals if s['category']==key]
@@ -83,7 +97,13 @@ def risk(parsed,ml,enrichment,config):
     adjustment=round(max(0,floor-weighted_score),2)
     if adjustment:
         contributions.append({'category':'correlated_evidence','maximum_points':round(100-weighted_score,2),'strength':round(adjustment/(100-weighted_score),4),'points':adjustment})
-    score=min(100,round(weighted_score+adjustment))
+    model_review=model_review_policy(ml,config)
+    after_correlation=round(weighted_score+adjustment,2)
+    review_adjustment=round(max(0,(model_review['minimum_score'] if model_review else 0)-after_correlation),2)
+    if review_adjustment:
+        contributions.append({'category':'model_review','maximum_points':round(100-after_correlation,2),
+            'strength':round(review_adjustment/(100-after_correlation),4),'points':review_adjustment})
+    score=min(100,round(after_correlation+review_adjustment))
     low,high,critical=config['risk_thresholds']
     severity='CRITICAL' if score>=critical else 'HIGH' if score>=high else 'MEDIUM' if score>=low else 'LOW'
     category,category_basis=threat_category(parsed,ml)
@@ -92,11 +112,15 @@ def risk(parsed,ml,enrichment,config):
     for rule in rules:add('correlated_evidence',rule['minimum_score']/100,rule['reason'],rule['evidence'],'Local correlation rule: '+rule['id'])
     confidence=ml.get('confidence') if verdict==ml.get('label') else None
     return {'category':category,'category_basis':category_basis,'confidence':confidence,'confidence_source':'ML class probability only' if confidence is not None else 'Uncalibrated local rule; no probability assigned',
-        'risk_score':score,'severity':severity,'contributions':contributions,'signals':signals,'risk_version':'2.0',
-        'weighted_score':round(weighted_score,2),'correlation_rules':rules,
+        'risk_score':score,'severity':severity,'contributions':contributions,'signals':signals,'risk_version':RISK_VERSION,
+        'weighted_score':round(weighted_score,2),'correlation_rules':rules,'model_review':model_review,
+        'scoring_policy':{'weights':dict(weights),'thresholds':list(config['risk_thresholds']),'model_high_priority_probability':.7},
+        'review_recommendation':('Suspected '+verdict+' — analyst review required' if verdict in ('PHISHING','BEC') else
+            'Model unavailable — manual review required' if ml.get('status')!='Available' else
+            'Review the observed risk indicators' if score>=low else 'Low observed risk; this is not a safety verdict'),
         'verdict':verdict,'verdict_source':'Local evidence correlation'+(' and ML inference' if verdict==ml.get('label') else '; model prediction retained separately') if strongest else 'ML inference' if ml['status']=='Available' else 'Model unavailable',
-        'formula':'Maximum of weighted evidence score and strongest matched correlation-rule minimum; repeated URL signals use the strongest URL only',
-        'interpretation':'Policy-based review priority, not a probability. Missing evidence does not indicate safety. Model prediction and correlation rules are shown separately.'}
+        'formula':'Maximum of weighted evidence, correlation-rule minimum, and model review minimum; repeated URL signals use the strongest URL only',
+        'interpretation':'Policy-based review priority, not a probability. Missing evidence does not indicate safety. Model review adjustments are policy decisions, not extra forensic evidence.'}
 
 def threat_category(parsed,ml):
     text=parsed['model_text'].lower()
@@ -104,7 +128,8 @@ def threat_category(parsed,ml):
     if ml.get('label')=='BEC':return 'BUSINESS_EMAIL_COMPROMISE','ML-derived category; inspect payment instructions and sender identity'
     if ml.get('label')=='PHISHING' and credential_links:return 'CREDENTIAL_THEFT','Phishing model verdict plus locally observed credential-link wording; analyst review required'
     identity=parsed['sender_identity']
-    if identity['lookalikes'] or identity.get('display_name_mismatch'):return 'POSSIBLE_IMPERSONATION','Local identity/lookalike evidence; ownership and intent are not established'
+    sender_lookalikes=[x for x in identity['lookalikes'] if x['observed_domain'] in {identity.get('sender_domain'),identity.get('reply_to_domain')}]
+    if sender_lookalikes or identity.get('display_name_mismatch'):return 'POSSIBLE_IMPERSONATION','Local identity/lookalike evidence; ownership and intent are not established'
     if re.search(r'wire transfer|bank details|payment details|beneficiary|gift cards',text) and re.search(r'changed|new|urgent|confidential|today',text):return 'PAYMENT_REDIRECTION_REVIEW','Payment and urgency/change wording observed locally; this does not override the ML verdict'
     if ml.get('label')=='PHISHING':return 'PHISHING','ML-derived category'
     if ml.get('label')=='SPAM':return 'UNSOLICITED_EMAIL','ML-derived category'
@@ -115,7 +140,7 @@ def threat_category(parsed,ml):
 def geolocation_summary(parsed,enrichment):
     public=[i for i in parsed['iocs'] if i['type']=='ip' and ip_kind(i['value'])=='Public']
     rows=[p for item in enrichment if item['type']=='ip' for p in item.get('providers',[]) if p['provider']=='geoip']
-    coordinates=[p for p in rows if p.get('status')=='Available' and isinstance((p.get('result') or {}).get('latitude'),(int,float)) and isinstance((p.get('result') or {}).get('longitude'),(int,float))]
+    coordinates=[p for p in rows if p.get('status')=='Available' and coordinates_available(p.get('result'))]
     if coordinates:status,reason='Available','Local GeoIP coordinates are available for observed network IPs; they do not identify a person or establish sender origin.'
     elif not public:status,reason='Not Observable','This email contains no observed public IP address to geolocate. '+parsed['origin']['reason']+'. Domain names alone do not establish the sending location.'
     elif any(p.get('status')=='Available' for p in rows):status,reason='No Coordinates','Local GeoIP returned network information but no coordinates. An ASN database alone cannot place a marker.'
@@ -175,6 +200,23 @@ def acquire(raw,filename,user_id,source='upload',parent_evidence_id=None):
         'status':'Uploaded','created_at':now(),'updated_at':now(),'attempts':0,'history':[{'status':'Uploaded','timestamp':now()}]})
     return {'email_id':email_id,'job_id':job_id,'evidence_id':evidence['_id'],'status':'Uploaded'}
 
+def expire_jobs():
+    """Keep the job and its email/report state consistent after worker loss."""
+    stamp=now();reason='Worker lease expired; retry explicitly'
+    query={'lease_until':{'$lt':stamp},'status':{'$nin':['Completed','Failed','Uploaded']}}
+    for job in db.jobs.find(query):
+        changed=db.jobs.update_one({'_id':job['_id'],**query},
+            {'$set':{'status':'Failed','error':reason,'updated_at':stamp},'$unset':{'lease_until':''}})
+        if not changed.modified_count:continue
+        if job.get('report_id'):
+            db.reports.update_one({'_id':job['report_id'],'status':{'$ne':'Completed'}},
+                {'$set':{'status':'Failed','error':reason}})
+        if job.get('email_id'):
+            latest=db.jobs.find_one({'email_id':job['email_id']},sort=[('created_at',-1)])
+            if latest and latest['_id']==job['_id']:
+                db.emails.update_one({'_id':job['email_id'],'status':{'$nin':['Completed','Failed']}},
+                    {'$set':{'status':'Failed'}})
+
 def stage(job,name):
     stamp=now()
     db.jobs.update_one({'_id':job['_id']},{'$set':{'status':name,'updated_at':stamp,'lease_until':stamp+timedelta(minutes=30)},'$push':{'history':{'status':name,'timestamp':stamp}}})
@@ -192,7 +234,7 @@ def process(job_id):
             build_report(job);return
         evidence=db.evidence.find_one({'_id':job['evidence_id']});raw=original(evidence)
         stage(job,'Parsing');parsed=parse(raw)
-        if len(parsed['body'])>1_000_000:raise ValueError('Decoded email body exceeds the analysis limit')
+        if len(parsed['model_text'])>1_000_000:raise ValueError('Decoded email body exceeds the analysis limit')
         stage(job,'Forensics');config=settings()
         enrich_authentication(raw,parsed,config)
         db.emails.update_one({'_id':job['email_id']},{'$set':{'sender':parsed['sender'],'subject':parsed['subject'],
@@ -207,7 +249,9 @@ def process(job_id):
         selected,omitted=select_indicators(parsed)
         for item in selected:
             try:enrichment.append(lookup(item['type'],item['value'],allow_external=config['automatic_enrichment']))
-            except (ValueError,UnicodeError):continue
+            except Exception:
+                enrichment.append({'type':item['type'],'query':item['value'],'providers':[],'status':'Unavailable','reason':'Indicator enrichment unavailable'})
+        analyzed_hops=enrich_mail_path(parsed,enrichment)
         risk_result=risk(parsed,ml,enrichment,config)
         stage(job,'Correlation');connections=graph(job['email_id'],parsed,enrichment)
         related=[]
@@ -224,8 +268,8 @@ def process(job_id):
         timeline.append({'timestamp':now().isoformat(),'type':'System timestamp','event':'Analysis completed'})
         analysis={'_id':job['email_id'],'email_id':job['email_id'],'evidence_id':evidence['_id'],'created_at':now(),
             'forensics':parsed,'ml':ml,'intelligence':enrichment,'provider_status':statuses(),
-            'geolocation':geolocation_summary(parsed,enrichment),
-            'enrichment_status':'Local enrichment evaluated for up to 25 indicators; external API lookups '+('enabled' if config['automatic_enrichment'] else 'disabled'),
+            'geolocation':geolocation_summary(parsed,enrichment),'analyzed_hops':analyzed_hops,'mail_path':parsed['mail_path'],
+            'enrichment_status':'Local GeoIP evaluated for every observed public IP; reputation/DNS enrichment limited to 25 indicators; external API lookups '+('enabled' if config['automatic_enrichment'] else 'disabled'),
             'analysis_mode':'PASSIVE','enrichment_limit':25,'omitted_enrichment_indicators':omitted,
             'graph':connections,'related_emails':related,'timeline':sorted(timeline,key=lambda x:x['timestamp']),
             'ioc_values':[i['value'] for i in parsed['iocs']],**risk_result}
@@ -240,6 +284,10 @@ def process(job_id):
         for item in parsed['iocs']:
             iid=hashlib.sha256((item['type']+':'+item['value']).encode()).hexdigest()
             db.iocs.update_one({'_id':iid},{'$set':{**item,'last_seen':now()},'$setOnInsert':{'first_seen':now()},'$addToSet':{'email_ids':job['email_id']}},upsert=True)
+        # Refresh an existing alert after reanalysis without reopening one that
+        # an analyst already acknowledged or resolved.
+        db.alerts.update_one({'_id':job['email_id']},{'$set':{'severity':analysis['severity'],
+            'reason':[s['reason'] for s in risk_result['signals']],'review_recommendation':risk_result['review_recommendation']}})
         if risk_result['risk_score']>=config['alert_threshold'] or malicious_signals(enrichment) or any(a['flags'] for a in parsed['attachments']):
             db.alerts.update_one({'_id':job['email_id']},{'$setOnInsert':{'email_id':job['email_id'],'severity':risk_result['severity'],
                 'type':'Email risk','created_at':now(),'status':'OPEN','reason':[s['reason'] for s in risk_result['signals']]}},upsert=True)
@@ -259,8 +307,7 @@ def dispatch_loop(stop):
         while not stop.wait(1):
             try:
                 pending={key:f for key,f in pending.items() if not f.done()}
-                db.jobs.update_many({'lease_until':{'$lt':now()},'status':{'$nin':['Completed','Failed','Uploaded']}},
-                    {'$set':{'status':'Failed','error':'Worker lease expired; retry explicitly'}})
+                expire_jobs()
                 for job in db.jobs.find({'status':'Uploaded'}).sort('created_at',1).limit(max(0,2-len(pending)) or 1):
                     if len(pending)>=2:break
                     if job['_id'] not in pending:pending[job['_id']]=pool.submit(process,job['_id'])

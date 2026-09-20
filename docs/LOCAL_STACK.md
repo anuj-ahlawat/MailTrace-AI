@@ -135,3 +135,5 @@ BACKEND_URL=http://127.0.0.1:8000 npm --prefix app run dev -- --hostname 127.0.0
 Open `http://127.0.0.1:3000`; API docs are at `http://127.0.0.1:8000/docs`. Stop processes with Ctrl+C. Run only one beat scheduler. The root README also documents a simpler `WORKER_MODE=local` setup without Redis and the authenticated Docker stack. Docker startup/build was not rerun as part of this follow-up.
 
 The dkimpy behavior and DNS timeout APIs follow the [dkimpy package documentation](https://pypi.org/project/dkimpy/) and [dnspython resolver documentation](https://dnspython.readthedocs.io/en/stable/resolver-class.html).
+
+The subsequent [IP/GeoIP pipeline update](IP_GEOIP_PIPELINE.md) adds complete source/destination mail paths, IPv6 and per-hop results. Local GeoIP now covers every observed public IP independently of the 25-indicator external reputation/DNS budget.

@@ -1,0 +1,61 @@
+From: Microsoft Security <security@micr0soft-support.example>
+To: Analyst <analyst@training.example>
+Reply-To: verification@account-recovery.example
+Return-Path: <bounce@account-recovery.example>
+Subject: [SYNTHETIC TEST] Urgent: verify your account immediately
+Date: Sun, 20 Sep 2026 10:00:00 +0000
+Message-ID: <mailtrace-critical-scenario-20260920@training.example>
+X-MailTrace-Test: Synthetic fixture; no real sender or reputation claims
+Authentication-Results:
+ fixture.training.example; spf=fail; dkim=fail; dmarc=fail
+Received: from relay.training.example [192.0.2.20] by inbox.training.example;
+ Sun, 20 Sep 2026 09:00:00 +0000
+Received: from sender.training.example [192.0.2.10] by relay.training.example;
+ Sun, 20 Sep 2026 10:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============6772188059124369691=="
+
+--===============6772188059124369691==
+Content-Type: multipart/alternative;
+ boundary="===============5545513778425329736=="
+
+--===============5545513778425329736==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+SYNTHETIC MAILTRACE TEST =E2=80=94 not an actual security notification.
+
+Your account will be suspended within 2 hours. Verify your account immediatel=
+y.
+Confirm your password and identity to prevent permanent account restrictions.
+Sign in to review the urgent account security alert.
+
+The following link and attachment are inert test fixtures. No credentials sho=
+uld be entered.
+
+--===============5545513778425329736==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<p>SYNTHETIC MAILTRACE TEST =E2=80=94 not an actual security notification.</p=
+><p></p><p>Your account will be suspended within 2 hours. Verify your account=
+ immediately.</p><p>Confirm your password and identity to prevent permanent a=
+ccount restrictions.</p><p>Sign in to review the urgent account security aler=
+t.</p><p></p><p>The following link and attachment are inert test fixtures. No=
+ credentials should be entered.</p><p></p><a href=3D"http://login.micr0soft-s=
+upport.example/verify/password?next=3Dhttps%3A%2F%2Frecovery.example%2Faccoun=
+t">https://accounts.training.example/security</a>
+
+--===============5545513778425329736==--
+
+--===============6772188059124369691==
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="account-verification.exe"
+MIME-Version: 1.0
+
+U1lOVEhFVElDIFRFU1QgT05MWS4gUGxhaW4gdGV4dCwgbm90IGFuIGV4ZWN1dGFibGUuIE5vIGV4
+ZWN1dGFibGUgY29kZSBvciBtYWx3YXJlLgo=
+
+--===============6772188059124369691==--

@@ -92,4 +92,4 @@ VirusTotal and AbuseIPDB are optional reputation APIs. Local MaxMind enrichment 
 
 ## Migration
 
-The old Flask entry point, seed scripts, mock libraries, disconnected components and old API modules are preserved in `legacy/` for reference. They are excluded from deployment. The supported application does not import them. The new database is isolated; no legacy record is silently copied into evidence or reclassified as authentic. Original messages must be reacquired to establish a real preservation hash and custody history.
+The unused Flask prototype, seed scripts, mock libraries, disconnected components and old API modules were removed during cleanup; their source remains available in Git history. The supported application did not import them. The new database is isolated; no legacy record is silently copied into evidence or reclassified as authentic. Original messages must be reacquired to establish a real preservation hash and custody history.

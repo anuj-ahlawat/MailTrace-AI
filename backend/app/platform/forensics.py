@@ -38,24 +38,23 @@ def timestamp(value):
         return None
 
 def ip_kind(value):
-    try:
-        ip = ipaddress.ip_address(value)
-        if ip.is_loopback or ip.is_link_local: return 'Internal'
-        if ip.is_reserved or ip.is_multicast or ip.is_unspecified: return 'Reserved'
-        if ip.is_global: return 'Public'
-        return 'Private' if ip.is_private else 'Reserved'
-    except ValueError:
-        return 'Unknown'
+    category=classify_ip(value)['classification']
+    return {'Loopback':'Internal','Link-local':'Internal','Multicast':'Reserved','Invalid':'Unknown'}.get(category,category)
 
 def classify_ip(value):
     """Detailed classification without changing the existing ip_kind contract."""
     try:
         ip=ipaddress.ip_address(value)
-        category=('Loopback' if ip.is_loopback else 'Link-local' if ip.is_link_local else
-            'Multicast' if ip.is_multicast else 'Reserved' if ip.is_reserved or ip.is_unspecified else
-            'Public' if ip.is_global else 'Private' if ip.is_private else 'Reserved')
-        return {'ip':str(ip),'valid':True,'version':ip.version,'classification':category,'public':ip.is_global and not ip.is_multicast}
-    except ValueError:
+        mapped=ip.ipv4_mapped if ip.version==6 else None
+        effective=mapped or ip
+        private=any(effective in ipaddress.ip_network(n) for n in
+            (('10.0.0.0/8','172.16.0.0/12','192.168.0.0/16') if effective.version==4 else ('fc00::/7',)))
+        category=('Loopback' if effective.is_loopback else 'Link-local' if effective.is_link_local else
+            'Multicast' if effective.is_multicast else 'Private' if private else
+            'Reserved' if effective.is_reserved or effective.is_unspecified or not effective.is_global else 'Public')
+        return {'ip':str(ip),'valid':True,'version':ip.version,'classification':category,'public':category=='Public',
+            'lookup_ip':str(effective).split('%',1)[0],'ipv4_mapped':str(mapped) if mapped else None}
+    except (ValueError,TypeError):
         return {'ip':value,'valid':False,'classification':'Invalid','public':False}
 
 
@@ -105,13 +104,22 @@ def analyze_url(value, display='', sender_domain=''):
 
 
 def ips_in(value):
-    found = []
-    for token in re.findall(r'[0-9a-fA-F:.]+', value):
-        token = token.strip('.')
-        try:
-            ip = str(ipaddress.ip_address(token))
-            if ip not in found: found.append(ip)
-        except ValueError: pass
+    return [i['ip'] for i in header_ips(value) if i['valid']]
+
+def header_ips(value):
+    """Only call for IP-bearing header fields, never arbitrary body text.
+
+    Keep malformed literals for analyst review. Whole tokens avoid extracting
+    an IPv4 substring from a hostname or IPv4-mapped IPv6 address.
+    """
+    found=[]
+    for match in re.finditer(r'\[([^\]\r\n]+)\]|([^\s()<>;,=\[\]]+)',value):
+        raw=(match.group(1) or match.group(2)).strip()
+        token=re.sub(r'^IPv6:', '',raw,flags=re.I).strip('"').rstrip('.')
+        looks_ip=(raw.lower().startswith('ipv6:') or token.count(':')>=2 or bool(re.fullmatch(r'[0-9.]+',token) and '.' in token))
+        if not looks_ip:continue
+        info=classify_ip(token)
+        found.append({**info,'observed_value':raw,'offset':match.start()})
     return found
 
 def lookalike(domain):
@@ -173,7 +181,7 @@ def parse(raw: bytes):
     urls = set(re.findall(r'https?://[^\s<>"\x27]+', body + '\n' + html_text + '\n' + raw_headers,re.I))
     displays = {}
     for a in soup.find_all('a', href=True):
-        href = str(a['href'])
+        href = str(a['href']).strip()
         if href.lower().startswith(('http://','https://')):
             urls.add(href); displays[href] = a.get_text(' ',strip=True)
     url_info = []
@@ -186,21 +194,33 @@ def parse(raw: bytes):
         from_match = re.search(r'\bfrom\s+([^\s(;]+)',value,re.I)
         by_match = re.search(r'\bby\s+([^\s(;]+)',value,re.I)
         protocol = re.search(r'\bwith\s+([^\s;]+)',value,re.I)
-        # Only the sending portion before "by" is a candidate sending IP.
-        sending = re.split(r'\bby\s',value,flags=re.I)[0]
-        candidates = ips_in(sending)
+        # Extract the entire path (including "by") but exclude the date suffix.
+        candidates=header_ips(value.split(';',1)[0])
+        ips=[]
+        for info in candidates:
+            role='destination' if by_match and info['offset']>=by_match.start() else 'source' if from_match and info['offset']>=from_match.start() else 'observed'
+            ips.append({**info,'type':ip_kind(info['ip']),'role':role})
         relay.append({'hop':index+1,'hostname':from_match.group(1) if from_match else None,
             'by':by_match.group(1) if by_match else None,'protocol':protocol.group(1) if protocol else None,
-            'ips':[{'ip':ip,'type':ip_kind(ip),**classify_ip(ip)} for ip in candidates],
+            'source_server':from_match.group(1) if from_match else None,'destination_server':by_match.group(1) if by_match else None,
+            'ips':ips,'parsed_ip':next((i['ip'] for i in ips if i['valid']),None),
             'timestamp':timestamp(value.rsplit(';',1)[-1]),'raw':value,'source':'Observed header','confidence':'Unverified'})
+    observations=[{**i,'header':'Received','hop':h['hop'],'raw_header':h['raw'],'timestamp':h['timestamp']} for h in relay for i in h['ips']]
+    for name in ('x-originating-ip','x-sender-ip','x-real-ip','received-spf'):
+        for value in headers.get(name,[]):
+            values=re.findall(r'\bclient-ip\s*=\s*([^;\s]+)',value,re.I) if name=='received-spf' else [value]
+            for part in values:
+                observations.extend({**i,'type':ip_kind(i['ip']),'role':'reported client','header':name,'hop':None,'raw_header':value,'timestamp':None} for i in header_ips(part))
     anomalies=[]
     for a,b in zip(relay,relay[1:]):
         if a['timestamp'] and b['timestamp'] and a['timestamp'] > b['timestamp']:
             anomalies.append({'finding':'Potential timestamp-order anomaly','evidence':[a['raw'],b['raw']],'confidence':'Low; clock skew is possible'})
-    candidate = next((i['ip'] for h in relay for i in h['ips'] if i['type']=='Public'),None)
+    origin_candidates=list(dict.fromkeys(i['ip'] for h in relay for i in h['ips'] if i['public'] and i['role']=='source'))
+    candidate=origin_candidates[0] if origin_candidates else None
     origin={'ip':None,'candidate_ip':candidate,'confidence':'Insufficient Evidence',
+        'candidate_ips':origin_candidates,'selection_rule':'Legacy candidate_ip is the earliest observed public source-side relay IP, not a verified origin; all candidates are retained',
         'reason':('Header trust boundary is not established; earliest observed public sending node is a candidate only' if candidate else
-            'No Received headers are present; the message provides no sending IP to geolocate' if not relay else
+            'No Received headers are present; no sending IP can be established from the mail path' if not relay else
             'Received headers contain no public sending IP; private/reserved addresses cannot establish a public location'),
         'evidence':next((h['raw'] for h in relay if any(i['ip']==candidate for i in h['ips'])),None)}
     auth={}
@@ -219,7 +239,7 @@ def parse(raw: bytes):
             'verification_status':'Signature present; cryptographic verification unavailable'})
     auth['dkim']['signatures']=signatures
     spf_domain_match=re.search(r'smtp\.mailfrom=([^\s;]+)',combined,re.I)
-    spf_domain=spf_domain_match.group(1).rsplit('@',1)[-1].lower() if spf_domain_match else None
+    spf_domain=spf_domain_match.group(1).strip('"<>').rsplit('@',1)[-1].lower() if spf_domain_match else None
     received_spf=headers.get('received-spf',[])
     if auth['spf']['reported_result']=='Unknown' and received_spf:
         match=re.match(r'\s*(pass|fail|softfail|neutral|none|temperror|permerror)\b',received_spf[0],re.I)
@@ -232,13 +252,16 @@ def parse(raw: bytes):
         alignment_basis='Relaxed registered-domain comparison; not cryptographic verification')
     domains=sorted({d for d in [sender_domain,reply_domain,spf_domain]+[s['domain'] for s in signatures]+[u['domain'] for u in url_info] if d})
     iocs=[{'type':'domain','value':d,'source':'Observed email'} for d in domains]
-    iocs += [{'type':'ip','value':ip,'source':'Received header'} for ip in sorted({i['ip'] for h in relay for i in h['ips']})]
+    iocs += [{'type':'ip','value':ip,'source':'Received header' if any(i['ip']==ip and i['header']=='Received' for i in observations) else 'IP-bearing email header'} for ip in sorted({i['ip'] for i in observations if i['valid']})]
     relay_ips={i['value'] for i in iocs if i['type']=='ip'}
     iocs += [{'type':'ip','value':ip,'source':'URL hostname (not sender origin)'} for ip in sorted({u['domain'] for u in url_info if classify_ip(u['domain'])['valid']}) if ip not in relay_ips]
     iocs += [{'type':'url','value':u['original_url'],'source':'Observed email'} for u in url_info]
     iocs += [{'type':'hash','value':a['sha256'],'source':'Attachment bytes'} for a in attachments]
     display_name=getaddresses(msg.get_all('From',[]))[0][0] if sender else ''
     display_mismatch=[{'display_name':display_name,'claimed_brand':brand,'sender_domain':sender_domain,'source':'Local display-name comparison','assessment':'Possible impersonation, not proof'} for brand in BRANDS if re.search(r'\b'+re.escape(brand.split('.')[0])+r'\b',display_name,re.I) and registered(sender_domain)!=brand]
+    # Distinct HTML content must not be hidden by a benign plain-text alternative.
+    model_body=body
+    if html_text and ' '.join(html_text.split())!=' '.join(body.split()):model_body+='\n'+html_text
     return {'subject':str(msg.get('Subject','')),'sender':sender[0] if sender else '',
         'from_addresses':sender,'display_name':getaddresses(msg.get_all('From',[]))[0][0] if sender else '',
         'recipient':addresses('To'),'cc':addresses('Cc'),'bcc':addresses('Bcc'),
@@ -247,11 +270,12 @@ def parse(raw: bytes):
         'references':str(msg.get('References','')),'in_reply_to':str(msg.get('In-Reply-To','')),
         'headers':headers,'raw_headers':raw_headers,'body':body,'plain_text_body':'\n'.join(text),'html_body':html_body,'html_text':html_text,
         'mime':{'content_type':msg.get_content_type(),'multipart':msg.is_multipart(),'parts':mime_parts},
-        'ip_analysis':[classify_ip(ip) for ip in sorted({i['ip'] for h in relay for i in h['ips']})],
-        'model_text':str(msg.get('Subject',''))+'\n'+body,'urls':url_info,'domains':domains,
+        'ip_analysis':[classify_ip(ip) for ip in sorted({i['ip'] for i in observations})],
+        'ip_observations':observations,'mail_path':relay,
+        'model_text':str(msg.get('Subject',''))+'\n'+model_body,'urls':url_info,'domains':domains,
         'attachments':attachments,'received_chain':relay,'origin':origin,'authentication':auth,
         'sender_identity':{'display_name_mismatch':display_mismatch,'sender_domain':sender_domain,'reply_to_domain':reply_domain,
             'reply_to_mismatch':bool(reply_domain and registered(reply_domain)!=registered(sender_domain)),
-            'lookalikes':[x for d in domains for x in lookalike(d)]},
+            'lookalikes':[x for d in sorted({sender_domain,reply_domain}-{''}) for x in lookalike(d)]},
         'anomalies':anomalies,'iocs':iocs,'parser_defects':[type(d).__name__ for d in msg.defects],
         'limitations':LIMITATIONS}

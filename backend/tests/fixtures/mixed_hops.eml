@@ -1,0 +1,11 @@
+Received: from edge [2606:4700:4700::1111] by final [1.1.1.1]; Fri, 18 Sep 2026 10:03:00 +0000
+Received: from internal [10.0.0.1] by edge [8.8.8.8]; Fri, 18 Sep 2026 10:02:00 +0000
+Received: from local ([::ffff:8.8.8.8]) by internal; Fri, 18 Sep 2026 10:01:00 +0000
+Received: from bad [999.0.0.1] by host; Fri, 18 Sep 2026 10:00:00 +0000
+From: sender@example.com
+To: reader@example.com
+Subject: Planning meeting
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Please join the planning meeting tomorrow.

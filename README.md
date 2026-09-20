@@ -26,7 +26,7 @@ flowchart LR
   C --> Reports[Background PDF / JSON snapshots]
 ```
 
-The existing `app/` frontend directory is retained. `backend/app/main.py` is the supported API; `backend/main.py` remains a compatible Uvicorn entry point. The prototype is archived under `legacy/` and is not deployed. Production defaults to a fresh `mailtrace_enterprise` database, preserving the old `mailtrace_ai` database without presenting seeded records as real investigations.
+The existing `app/` frontend directory is retained. `backend/app/main.py` is the supported API; `backend/main.py` remains a compatible Uvicorn entry point. Unused prototype source was removed during cleanup and remains available in Git history. Production defaults to a fresh `mailtrace_enterprise` database, preserving the old `mailtrace_ai` database without presenting seeded records as real investigations.
 
 ## Local installation
 
@@ -146,3 +146,5 @@ Suspicious attachment types are not malware verdicts. Geolocation is approximate
 Masking is configurable for analyst views, with original downloads restricted under that policy. Retention is opt-in; case-linked evidence and analyses are held. Redis/Celery beat applies configured retention hourly; local mode supports an administrator-triggered run. No active/intrusive investigation or automatic URL execution is performed.
 
 See [scoring and missing-location correction](docs/SCORING_FIX.md) for version 2.0 correlation rules, regression results, and the difference between model probability, risk score, and unavailable location evidence.
+
+See [IP/GeoIP investigation pipeline](docs/IP_GEOIP_PIPELINE.md) for per-hop IPv4/IPv6 analysis, unavailable-location reasons, configuration, and verification.

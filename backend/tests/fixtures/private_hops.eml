@@ -1,0 +1,10 @@
+Received: from local [192.168.1.1] by gateway [10.0.0.1]
+Received: from loop [::1] by link [fe80::1]
+Received: from private [fd00::1] by gateway [172.16.0.1]
+From: sender@example.com
+To: reader@example.com
+Subject: Planning meeting
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Please join the planning meeting tomorrow.

@@ -15,7 +15,7 @@ from pymongo.errors import DuplicateKeyError
 from .store import db,now,uid,clean,settings,DEFAULTS,event,custody,original,DATA,cipher
 from .security import current_user,admin,senior,passwords,login_session
 from .pipeline import acquire
-from .intelligence import statuses,lookup,validate,KEYS,CORE_PROVIDERS
+from .intelligence import statuses,lookup,validate,KEYS,CORE_PROVIDERS,provider_health
 from app.ml.service import ml_service,clear_model_cache,model_catalog
 
 router=APIRouter(prefix='/api')
@@ -93,7 +93,7 @@ def output(row,user):
     value=clean(row)
     if user['role']=='ANALYST' and settings()['mask_sensitive']:
         def mask(v):
-            if isinstance(v,dict):return {k:('[Masked by privacy policy]' if k in {'body','html_body','model_text','raw_headers','headers','display_name','original_filename','plain_text_body','html_text'} else mask(x)) for k,x in v.items()}
+            if isinstance(v,dict):return {k:('[Masked by privacy policy]' if k in {'body','html_body','model_text','raw_headers','raw_header','headers','display_name','original_filename','plain_text_body','html_text'} else mask(x)) for k,x in v.items()}
             if isinstance(v,list):return [mask(x) for x in v]
             if isinstance(v,str):
                 v=re.sub(r'[\w.+-]+@[\w.-]+','[masked email]',v)
@@ -255,6 +255,9 @@ def infrastructure(email_id:str,user=Depends(current_user)):return output(get('e
 
 @router.get('/intelligence/status')
 def provider_status(user=Depends(current_user)):return statuses()
+
+@router.get('/intelligence/health')
+def intelligence_health(user=Depends(current_user)):return provider_health()
 
 @router.post('/intelligence/lookup')
 def intelligence(data:Indicator,user=Depends(current_user)):
@@ -466,7 +469,7 @@ def audit(skip:int=Query(0,ge=0),limit:int=Query(25,ge=1,le=100),user=Depends(ad
     return {'items':clean(list(db.audit_logs.find().sort('timestamp',-1).skip(skip).limit(limit))),'total':db.audit_logs.count_documents({})}
 
 @router.get('/settings')
-def system_settings(user=Depends(admin)):return {'settings':settings(),'providers':statuses(),'available_models':model_catalog(),'model':ml_service().metadata,'worker_mode':os.getenv('WORKER_MODE','local')}
+def system_settings(user=Depends(admin)):return {'settings':settings(),'providers':statuses(),'provider_health':provider_health(),'available_models':model_catalog(),'model':ml_service().metadata,'worker_mode':os.getenv('WORKER_MODE','local')}
 
 @router.put('/settings')
 def save_settings(data:SystemUpdate,user=Depends(admin)):

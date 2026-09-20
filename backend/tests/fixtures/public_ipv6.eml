@@ -1,0 +1,8 @@
+Received: from public ([IPv6:2606:4700:4700::1111]) by receiver
+From: sender@example.com
+To: reader@example.com
+Subject: Planning meeting
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Please join the planning meeting tomorrow.

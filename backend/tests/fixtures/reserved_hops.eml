@@ -1,0 +1,8 @@
+Received: from test [203.0.113.10] by receiver [2001:db8::1]
+From: sender@example.com
+To: reader@example.com
+Subject: Planning meeting
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Please join the planning meeting tomorrow.
