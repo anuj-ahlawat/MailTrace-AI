@@ -8,7 +8,7 @@ import Module from 'node:module';
 import ts from 'typescript';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-const filename = fileURLToPath(new URL('../components/RiskBreakdown.tsx', import.meta.url));
+const filename = fileURLToPath(new URL('../src/components/RiskBreakdown.tsx', import.meta.url));
 const component = new Module(filename);
 component.filename = filename;
 component.paths = Module._nodeModulePaths(path.dirname(filename));
@@ -72,4 +72,14 @@ test('phishing model review floor explains the reported 12-to-60 correction', ()
   assert.match(html, /final risk 60\/100 \(rounded after adding 47.89 model review points\)/);
   assert.match(html, /Model review adjustment/);
   assert.match(html, /Minimum review score: 60\/100/);
+});
+
+test('diagnostic component weights cannot replace the authoritative risk calculation', () => {
+  const html = render({ contributions: [row('ai', 12.11), row('model_review', 47.89, 87.89)],
+    weighted_score: 12.11, risk_score: 60, risk_version: '2.2',
+    component_scores: { ml: { score: 80, weight: .3 }, authentication: { score: 20, weight: .25 } },
+  });
+  assert.match(html, /weighted evidence 12.11\/100 · final risk 60\/100/);
+  assert.match(html, /max="15" value="12.11"/);
+  assert.doesNotMatch(html, /value="24"/);
 });

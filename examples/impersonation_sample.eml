@@ -1,0 +1,41 @@
+From: John Smith - CEO <john.smith@company-examp1e.example>
+To: Finance Team <finance@company-example.org>
+Reply-To: ceo.office@company-examp1e.example
+Return-Path: <john.smith@company-examp1e.example>
+Subject: [SYNTHETIC TEST] Confidential - Urgent wire transfer needed
+Date: Sun, 20 Sep 2026 11:00:00 +0000
+Message-ID: <impersonation-sample-20260920@company-examp1e.example>
+X-MailTrace-Test: Synthetic fixture; no real sender or reputation claims
+Authentication-Results:
+ mx.company-example.org; spf=softfail; dkim=none; dmarc=fail
+Received: from relay.cloud-host.example [203.0.113.88] by mx.company-example.org;
+ Sun, 20 Sep 2026 11:00:10 +0000
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+SYNTHETIC MAILTRACE TEST — not a real executive communication.
+
+Hi Finance Team,
+
+This is John. I'm in a confidential board meeting and need you to process
+an urgent wire transfer today. Do not discuss this with anyone.
+
+Please wire $250,000 to our new strategic partner:
+Bank: International Finance Bank
+Account: 1234567890
+Routing: 021000089
+Reference: CONF-STRATEGIC-2026
+
+This is extremely confidential. Do not call me. Reply to this email only.
+I need confirmation by 3 PM today.
+
+John Smith
+CEO, Company Example Organization
+
+NOTE: This is a SYNTHETIC TEST EMAIL demonstrating impersonation/BEC indicators:
+- Lookalike sender domain (company-examp1e vs company-example with digit substitution)
+- Urgency and secrecy pressure
+- Payment instruction diversion
+- Do not call instruction
+- SPF softfail

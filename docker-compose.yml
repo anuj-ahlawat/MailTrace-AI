@@ -9,12 +9,16 @@ x-backend: &backend
     MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASSWORD}@mongodb:27017/mailtrace_enterprise?authSource=mailtrace_enterprise
     MONGODB_DB_NAME: mailtrace_enterprise
     REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-    DATA_DIR: /srv/data
+    STORAGE_DIR: /srv/storage
     MODEL_DIR: /srv/ml/artifacts/production
     WORKER_MODE: celery
+    GEOIP_DIR: /srv/data/geoip
+    GEOIP_CITY_DB: ${DOCKER_GEOIP_CITY_DB:-/srv/data/geoip/GeoLite2-City.mmdb}
+    GEOIP_ASN_DB: ${DOCKER_GEOIP_ASN_DB:-/srv/data/geoip/GeoLite2-ASN.mmdb}
   volumes:
-    - evidence:/srv/data
+    - evidence:/srv/storage
     - ./ml/artifacts:/srv/ml/artifacts:ro
+    - ./data/geoip:/srv/data/geoip:ro
   restart: unless-stopped
   security_opt: [no-new-privileges:true]
   depends_on:
@@ -60,7 +64,7 @@ services:
       retries: 5
   worker:
     <<: *backend
-    command: [celery, -A, app.workers.celery_app:celery, worker, --beat, --loglevel=INFO, --concurrency=2, --schedule=/srv/data/celerybeat-schedule]
+    command: [celery, -A, backend.workers.celery_app:celery, worker, --beat, --loglevel=INFO, --concurrency=2, --schedule=/srv/storage/celerybeat-schedule]
   frontend:
     build:
       context: .

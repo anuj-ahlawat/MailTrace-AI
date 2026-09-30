@@ -1,0 +1,47 @@
+From: PayPal Security <security@paypa1-secure.example>
+To: Customer <victim@training.example>
+Reply-To: recovery@paypa1-secure.example
+Return-Path: <bounce@phishing-relay.example>
+Subject: [SYNTHETIC TEST] Your PayPal account has been limited
+Date: Sun, 20 Sep 2026 14:30:00 +0000
+Message-ID: <phish-sample-20260920@paypa1-secure.example>
+X-MailTrace-Test: Synthetic fixture; no real sender or reputation claims
+Authentication-Results:
+ mx.training.example; spf=fail; dkim=fail; dmarc=fail
+Received: from phishing-relay.example [198.51.100.77] by mx.training.example;
+ Sun, 20 Sep 2026 14:30:05 +0000
+Received: from vps-abuse.phishing-relay.example [198.51.100.22] by phishing-relay.example;
+ Sun, 20 Sep 2026 14:29:58 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="===============phish_boundary=="
+
+--===============phish_boundary==
+Content-Type: text/plain; charset="utf-8"
+
+SYNTHETIC MAILTRACE TEST — not a real PayPal notification.
+
+Your PayPal account has been limited due to suspicious activity.
+
+Your account will be permanently restricted within 24 hours unless you
+verify your identity immediately. Confirm your account details to restore
+full access to your funds.
+
+This is urgent. Act now to prevent account suspension.
+
+--===============phish_boundary==
+Content-Type: text/html; charset="utf-8"
+
+<html><body>
+<p>SYNTHETIC MAILTRACE TEST — not a real PayPal notification.</p>
+<p>Your PayPal account has been <b>limited</b> due to suspicious activity.</p>
+<p>Your account will be permanently restricted within 24 hours unless you
+verify your identity <b>immediately</b>. Confirm your password and account
+details to restore full access to your funds.</p>
+<p>This is <b>urgent</b>. Act now to prevent permanent account restrictions.</p>
+<a href="http://verify.paypa1-secure.example/account?next=https%3A%2F%2Fpaypal.com%2Flogin&session=abc123">
+  https://www.paypal.com/verify
+</a>
+<p>The link above is an inert test fixture. Do not enter any credentials.</p>
+</body></html>
+
+--===============phish_boundary==--

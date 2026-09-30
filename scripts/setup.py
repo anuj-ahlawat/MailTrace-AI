@@ -2,7 +2,7 @@
 import argparse,os,secrets,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'backend'))
+sys.path.insert(0,str(ROOT))
 from cryptography.fernet import Fernet
 ap=argparse.ArgumentParser();ap.add_argument('--admin-email',default='admin@mailtrace.ai');ap.add_argument('--create-admin',action='store_true');args=ap.parse_args()
 path=ROOT/'.env'
@@ -18,8 +18,8 @@ else:print('Existing .env preserved.')
 if args.create_admin:
     from email_validator import validate_email
     admin_email=validate_email(args.admin_email,check_deliverability=False).normalized.lower()
-    from app.platform.store import db,initialize,now,uid,DATA,event
-    from app.platform.security import passwords
+    from backend.database.store import db, initialize, now, uid, DATA, event
+    from backend.core.security import passwords
     initialize()
     if db.users.count_documents({'role':'ADMINISTRATOR','status':'active'}):print('An administrator already exists; no account changed.')
     else:

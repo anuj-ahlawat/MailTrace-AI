@@ -1,0 +1,57 @@
+From: Sarah Johnson <s.johnson@supplier-co.example>
+To: Accounts Payable <ap@company-example.org>
+Reply-To: s.johnson@supplier-c0.example
+Return-Path: <s.johnson@supplier-c0.example>
+Subject: [SYNTHETIC TEST] Updated bank details for invoice payment
+Date: Fri, 18 Sep 2026 15:45:00 +0000
+Message-ID: <bec-sample-20260918@supplier-c0.example>
+X-MailTrace-Test: Synthetic fixture; no real sender or reputation claims
+Authentication-Results:
+ mx.company-example.org; spf=fail; dkim=none; dmarc=fail
+X-Originating-IP: 203.0.113.150
+Received: from mail.overseas-vps.example [203.0.113.150] by mx.company-example.org;
+ Fri, 18 Sep 2026 15:45:05 +0000
+Received: from smtp.overseas-vps.example [203.0.113.120] by mail.overseas-vps.example;
+ Fri, 18 Sep 2026 15:44:58 +0000
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+SYNTHETIC MAILTRACE TEST — not a real supplier communication.
+
+Dear Accounts Payable,
+
+I hope this message finds you well. I am writing to inform you that our
+company bank details have changed effective immediately.
+
+Please update your records with our new bank details for all future
+payments, including any pending invoices:
+
+Bank Name: New International Bank
+Account Name: Supplier Co Ltd
+Account Number: 9876543210
+Sort Code: 12-34-56
+IBAN: GB00NEWB12345698765432
+BIC/SWIFT: NEWBGB2L
+
+Please ensure all pending payments are directed to the new account.
+This is confidential — please do not share these new details externally.
+
+If you have any questions, please reply to this email only. Do not call
+our main office number as our phone lines are currently undergoing
+maintenance.
+
+Please confirm receipt and process payment of invoice INV-2026-0892
+($45,000) to the new account by end of business today. This is urgent.
+
+Best regards,
+Sarah Johnson
+Senior Account Manager
+Supplier Co
+
+NOTE: This is a SYNTHETIC TEST EMAIL demonstrating BEC/payment fraud indicators:
+- Lookalike domain (supplier-c0 vs supplier-co with digit-for-letter substitution)
+- Reply-To different from sender domain
+- Urgency + payment diversion + secrecy
+- Request to avoid phone contact
+- SPF failure

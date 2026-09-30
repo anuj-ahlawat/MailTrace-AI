@@ -1,6 +1,8 @@
 .git
 .env
 **/.env
+**/.env.*
+!.env.example
 **/node_modules
 **/.next
 **/venv
@@ -9,6 +11,12 @@
 MailTrace-AI Dataset
 ml/artifacts
 data
+storage
+GeoLite2-*
+**/*.mmdb
+tests
+**/*.egg-info
+**/.pytest_cache
 legacy
 output
 tmp

@@ -4,7 +4,7 @@ COPY app/package*.json ./
 RUN npm ci
 COPY app ./
 ENV NEXT_TELEMETRY_DISABLED=1 BACKEND_URL=http://backend:8000
-RUN npm run build -- --webpack
+RUN mkdir -p public && npm run build -- --webpack
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0

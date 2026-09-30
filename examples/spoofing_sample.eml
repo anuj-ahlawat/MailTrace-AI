@@ -1,0 +1,40 @@
+From: IT Support <it-support@company-example.org>
+To: Employee <employee@company-example.org>
+Reply-To: helpdesk@attacker-domain.example
+Return-Path: <bounce@attacker-domain.example>
+Subject: [SYNTHETIC TEST] Action required: reset your company password
+Date: Sun, 20 Sep 2026 10:15:00 +0000
+Message-ID: <spoof-sample-20260920@attacker-domain.example>
+X-MailTrace-Test: Synthetic fixture; no real sender or reputation claims
+Authentication-Results:
+ mx.company-example.org; spf=fail; dkim=none; dmarc=fail
+X-Originating-IP: 198.51.100.45
+Received: from mail.attacker-domain.example [198.51.100.45] by mx.company-example.org;
+ Sun, 20 Sep 2026 10:15:06 +0000
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+SYNTHETIC MAILTRACE TEST — not a real IT Support communication.
+
+Dear Employee,
+
+Your company account password will expire in 1 hour. To maintain access
+to all company systems, you must reset your password immediately.
+
+Click the link below to reset your password:
+http://password-reset.attacker-domain.example/company/reset?token=xyz789
+
+If you do not reset your password within 1 hour, your account will be
+automatically locked and you will need to contact HR to restore access.
+
+This is time sensitive. Please act now.
+
+IT Support Team
+Company Example Organization
+
+NOTE: This is a SYNTHETIC TEST EMAIL demonstrating spoofing indicators:
+- From domain differs from sending infrastructure
+- Reply-To domain differs from From domain
+- SPF/DMARC failures
+- Suspicious URL not matching sender domain

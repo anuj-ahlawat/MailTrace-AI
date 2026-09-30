@@ -1,0 +1,29 @@
+"""Redis-backed worker; MongoDB job documents are the durable source of status."""
+import os
+from celery import Celery
+from backend.database.store import db
+from backend.core.pipeline import process, expire_jobs
+
+celery=Celery('mailtrace',broker=os.getenv('REDIS_URL','redis://localhost:6379/0'))
+celery.conf.update(task_serializer='json',accept_content=['json'],task_acks_late=True,
+    worker_prefetch_multiplier=1,broker_connection_retry_on_startup=True,
+    beat_schedule={'dispatch-pending':{'task':'mailtrace.dispatch','schedule':5.0},
+                   'maintenance':{'task':'mailtrace.maintenance','schedule':15.0}})
+
+@celery.task(name='mailtrace.analyze',soft_time_limit=1500,time_limit=1800)
+def analyze(job_id):process(job_id)
+
+@celery.task(name='mailtrace.dispatch')
+def dispatch():
+    expire_jobs()
+    for job in db.jobs.find({'status':'Uploaded'}).sort('created_at',1).limit(20):analyze.delay(job['_id'])
+
+@celery.task(name='mailtrace.retention')
+def retention():
+    from backend.core.retention import apply_retention
+    return apply_retention()
+
+@celery.task(name='mailtrace.maintenance',soft_time_limit=540,time_limit=600)
+def maintenance():
+    from backend.core.maintenance import tick
+    return tick()

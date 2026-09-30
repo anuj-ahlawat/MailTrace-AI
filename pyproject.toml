@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mailtrace-ai"
+version = "2.0.0"
+description = "Email threat detection and forensic investigation platform"
+requires-python = ">=3.12"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["backend/requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["backend*", "ml*"]
+exclude = ["backend.venv*", "ml.artifacts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

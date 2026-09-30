@@ -1,0 +1,1 @@
+"""MailTrace workers package."""

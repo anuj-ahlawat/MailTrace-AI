@@ -1,0 +1,45 @@
+From: HR Team <hr@company-example.org>
+To: Employee <employee@company-example.org>
+Reply-To: hr@company-example.org
+Return-Path: <hr@company-example.org>
+Subject: [SYNTHETIC TEST] Monthly newsletter - September 2026
+Date: Mon, 20 Sep 2026 09:00:00 +0000
+Message-ID: <newsletter-sept-2026-001@company-example.org>
+X-MailTrace-Test: Synthetic fixture; no real sender or reputation claims
+Authentication-Results:
+ mx.company-example.org; spf=pass smtp.mailfrom=hr@company-example.org;
+ dkim=pass header.d=company-example.org; dmarc=pass
+Received: from mail.company-example.org [203.0.113.10] by mx.company-example.org;
+ Mon, 20 Sep 2026 09:00:01 +0000
+Received: from smtp.company-example.org [203.0.113.5] by mail.company-example.org;
+ Mon, 20 Sep 2026 08:59:55 +0000
+DKIM-Signature: v=1; a=rsa-sha256; d=company-example.org; s=mail2026;
+ h=from:to:subject:date:message-id:content-type;
+ bh=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=;
+ b=SyntheticDKIMSignatureForTestingPurposesOnly==
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+SYNTHETIC MAILTRACE TEST — not a real company communication.
+
+Dear Employee,
+
+Please find this month's company newsletter. Our Q3 results have exceeded
+expectations, and the team has been doing outstanding work.
+
+Key highlights:
+- Company picnic scheduled for October 15th
+- New health benefits enrollment opens next week
+- Q3 performance reviews begin November 1st
+
+If you have any questions, contact HR at hr@company-example.org or visit
+our intranet at https://intranet.company-example.org/hr
+
+Best regards,
+HR Team
+Company Example Organization
+
+--
+This is a SYNTHETIC TEST EMAIL created for MailTrace AI demonstration.
+No real employee data or company information is contained herein.

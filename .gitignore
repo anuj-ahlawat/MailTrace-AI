@@ -8,8 +8,15 @@ backend/venv/
 __pycache__/
 *.pyc
 data/
+storage/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
 MailTrace-AI Dataset/
 ml/artifacts/
+ml/evaluation/plots/
 !ml/artifacts/.gitkeep
 app/node_modules/
 app/.next/
